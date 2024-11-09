@@ -1,2 +1,2 @@
-# Sistema_de_Gesti-n_empresarial_Libros_electr-nicos
+# Sistema_de_Gestion_empresarial_Libros_electronicos
 Sistema de Gestión empresarial Libros electrónicos
