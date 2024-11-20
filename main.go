@@ -23,7 +23,7 @@ func main() {
 		fmt.Println("8. Ver préstamos activos")
 		fmt.Println("9. Registrar devolución")
 		fmt.Println("10. Historial de préstamos")
-		fmt.Println("11. Buscar libros, autores o categorías") // Nueva opción
+		fmt.Println("11. Buscar libros, autores o categorías")
 		fmt.Println("0. Salir")
 
 		opcion := utilidades.LeerEntrada("Seleccione una opción: ")
@@ -50,7 +50,7 @@ func main() {
 		case "10":
 			servicios.VerHistorialPrestamos()
 		case "11":
-			realizarBusqueda() // Nueva funcionalidad
+			realizarBusqueda()
 		case "0":
 			fmt.Println("Saliendo del sistema...")
 			return
