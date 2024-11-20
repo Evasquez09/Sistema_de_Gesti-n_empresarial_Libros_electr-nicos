@@ -3,6 +3,7 @@ package servicios
 import (
 	"fmt"
 	"sistema_gestion_libros/modelos"
+	"strings"
 )
 
 var autores []modelos.Autor
@@ -48,4 +49,14 @@ func VerAutores() {
 	for _, autor := range autores {
 		fmt.Printf("ID: %d, Nombre: %s\n", autor.ID, autor.Nombre)
 	}
+}
+
+func BuscarAutores(query string) []modelos.Autor {
+	var resultados []modelos.Autor
+	for _, autor := range autores {
+		if strings.Contains(strings.ToLower(autor.Nombre), strings.ToLower(query)) {
+			resultados = append(resultados, autor)
+		}
+	}
+	return resultados
 }

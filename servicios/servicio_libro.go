@@ -3,10 +3,11 @@ package servicios
 import (
 	"fmt"
 	"sistema_gestion_libros/modelos"
+	"strings"
 )
 
 var libros []modelos.Libro
-var libroIDCounter int = 1 // Contador para asignar IDs únicos
+var libroIDCounter int = 1
 
 // Agrega un libro a la lista de libros
 func AgregarLibro(libro modelos.Libro) {
@@ -48,4 +49,16 @@ func VerLibros() {
 	for _, libro := range libros {
 		fmt.Printf("ID: %d, Título: %s, Autor: %s, Categoría: %s\n", libro.ID, libro.Titulo, libro.Autor, libro.Categoria)
 	}
+}
+
+func BuscarLibros(query string) []modelos.Libro {
+	var resultados []modelos.Libro
+	for _, libro := range libros {
+		if strings.Contains(strings.ToLower(libro.Titulo), strings.ToLower(query)) ||
+			strings.Contains(strings.ToLower(libro.Autor), strings.ToLower(query)) ||
+			strings.Contains(strings.ToLower(libro.Categoria), strings.ToLower(query)) {
+			resultados = append(resultados, libro)
+		}
+	}
+	return resultados
 }

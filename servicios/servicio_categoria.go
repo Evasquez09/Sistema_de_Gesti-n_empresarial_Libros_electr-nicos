@@ -3,6 +3,7 @@ package servicios
 import (
 	"fmt"
 	"sistema_gestion_libros/modelos"
+	"strings"
 )
 
 var categorias []modelos.Categoria
@@ -48,4 +49,14 @@ func ObtenerCategoriaPorID(id int) (modelos.Categoria, bool) {
 		}
 	}
 	return modelos.Categoria{}, false
+}
+
+func BuscarCategorias(query string) []modelos.Categoria {
+	var resultados []modelos.Categoria
+	for _, categoria := range categorias {
+		if strings.Contains(strings.ToLower(categoria.Nombre), strings.ToLower(query)) {
+			resultados = append(resultados, categoria)
+		}
+	}
+	return resultados
 }

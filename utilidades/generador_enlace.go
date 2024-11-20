@@ -6,7 +6,7 @@ import (
 )
 
 func GenerarEnlaceUnico() string {
-	bytes := make([]byte, 8) // 8 bytes para un identificador único corto
+	bytes := make([]byte, 8)
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return ""
