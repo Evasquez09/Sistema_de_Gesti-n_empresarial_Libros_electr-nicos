@@ -10,47 +10,69 @@ import (
 var prestamos []modelos.Prestamo
 var historialPrestamos []modelos.Prestamo
 
-func CrearPrestamo(libroID int, libroTitulo, estudiante string) {
+// Crear un préstamo
+func CrearPrestamo(libroID int, libroTitulo, estudiante string, limiteMaximo int) {
+	// Verificar si el estudiante ya excede el límite de préstamos
+	conteoPrestamos := contarPrestamosPorEstudiante(estudiante)
+	if conteoPrestamos >= limiteMaximo {
+		fmt.Printf("El estudiante '%s' ya alcanzó el límite máximo de préstamos (%d).\n", estudiante, limiteMaximo)
+		return
+	}
+
 	enlace := utilidades.GenerarEnlaceUnico()
-	prestamos = append(prestamos, modelos.Prestamo{
+	prestamo := modelos.Prestamo{
 		LibroID:    libroID,
 		Libro:      libroTitulo,
 		Estudiante: estudiante,
 		Fecha:      time.Now(),
 		Enlace:     enlace,
-	})
-	fmt.Printf("Préstamo creado: %s para %s. Enlace: %s\n", libroTitulo, estudiante, enlace)
+	}
+	prestamos = append(prestamos, prestamo)
+	fmt.Printf("Préstamo creado para el libro '%s'. Enlace de acceso: %s\n", libroTitulo, enlace)
 }
 
-func VerPrestamos() {
-	if len(prestamos) == 0 {
-		fmt.Println("No hay préstamos activos.")
-		return
-	}
-	fmt.Println("--- Préstamos Activos ---")
-	for _, p := range prestamos {
-		fmt.Printf("ID Libro: %d, Título: %s, Estudiante: %s, Fecha: %s\n", p.LibroID, p.Libro, p.Estudiante, p.Fecha.Format("02-01-2006"))
-	}
-}
-
+// Registrar devolución de un libro
 func RegistrarDevolucion(libroID int) bool {
 	for i, prestamo := range prestamos {
 		if prestamo.LibroID == libroID {
 			historialPrestamos = append(historialPrestamos, prestamo)
 			prestamos = append(prestamos[:i], prestamos[i+1:]...)
+			fmt.Printf("Devolución registrada: Libro '%s' del estudiante '%s'.\n", prestamo.Libro, prestamo.Estudiante)
 			return true
 		}
 	}
 	return false
 }
 
+// Ver historial de préstamos
 func VerHistorialPrestamos() {
-	if len(historialPrestamos) == 0 {
-		fmt.Println("No hay historial de préstamos.")
+	fmt.Println("\n--- Historial de Préstamos ---")
+	for _, prestamo := range historialPrestamos {
+		fmt.Printf("Libro: %s, Estudiante: %s, Fecha: %s\n",
+			prestamo.Libro, prestamo.Estudiante, prestamo.Fecha.Format("02-01-2006"))
+	}
+}
+
+// Contar los préstamos activos de un estudiante
+func contarPrestamosPorEstudiante(estudiante string) int {
+	conteo := 0
+	for _, prestamo := range prestamos {
+		if prestamo.Estudiante == estudiante {
+			conteo++
+		}
+	}
+	return conteo
+}
+
+// Función para ver los préstamos activos
+func VerPrestamos() {
+	fmt.Println("\n--- Lista de Préstamos Activos ---")
+	if len(prestamos) == 0 {
+		fmt.Println("No hay préstamos activos en este momento.")
 		return
 	}
-	fmt.Println("--- Historial de Préstamos ---")
-	for _, p := range historialPrestamos {
-		fmt.Printf("ID Libro: %d, Título: %s, Estudiante: %s, Fecha: %s\n", p.LibroID, p.Libro, p.Estudiante, p.Fecha.Format("02-01-2006"))
+	for _, prestamo := range prestamos {
+		fmt.Printf("ID del Libro: %d, Libro: %s, Estudiante: %s, Fecha: %s, Enlace: %s\n",
+			prestamo.LibroID, prestamo.Libro, prestamo.Estudiante, prestamo.Fecha.Format("02-01-2006"), prestamo.Enlace)
 	}
 }

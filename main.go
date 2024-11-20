@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+var limiteMaximoPrestamos int = 3
+
 func main() {
 	cargarDatosPredeterminados()
 
@@ -143,17 +145,21 @@ func agregarCategoria() {
 	fmt.Println("Categoría agregada correctamente.")
 }
 
+// Función para crear un préstamo
 func crearPrestamo() {
+	fmt.Println("\n--- Lista de Libros Disponibles (ID) ---")
 	servicios.VerLibros()
-	libroID, _ := strconv.Atoi(utilidades.LeerEntrada("Seleccione el ID del libro: "))
+
+	libroIDStr := utilidades.LeerEntrada("Ingrese el ID del libro para el préstamo: ")
+	libroID, _ := strconv.Atoi(libroIDStr)
 	libro, existe := servicios.ObtenerLibroPorID(libroID)
 	if !existe {
-		fmt.Println("El libro no está disponible.")
+		fmt.Println("El libro no está disponible en la biblioteca.")
 		return
 	}
 
 	estudiante := utilidades.LeerEntrada("Ingrese el nombre del estudiante: ")
-	servicios.CrearPrestamo(libroID, libro.Titulo, estudiante)
+	servicios.CrearPrestamo(libroID, libro.Titulo, estudiante, limiteMaximoPrestamos)
 }
 
 func registrarDevolucion() {
@@ -163,4 +169,16 @@ func registrarDevolucion() {
 	} else {
 		fmt.Println("No se encontró un préstamo activo para este libro.")
 	}
+}
+
+// Función para configurar el sistema
+func configurarSistema() {
+	maxPrestamosStr := utilidades.LeerEntrada("Ingrese el límite máximo de préstamos por estudiante: ")
+	maxPrestamos, err := strconv.Atoi(maxPrestamosStr)
+	if err != nil || maxPrestamos <= 0 {
+		fmt.Println("El valor ingresado no es válido.")
+		return
+	}
+	limiteMaximoPrestamos = maxPrestamos
+	fmt.Printf("Configuración actualizada: Límite máximo de préstamos establecido en %d.\n", limiteMaximoPrestamos)
 }
