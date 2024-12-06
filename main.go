@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"sistema_gestion_libros/modelos"
 	"sistema_gestion_libros/servicios"
@@ -9,6 +10,14 @@ import (
 )
 
 var limiteMaximoPrestamos int = 3
+
+// Se crean variables globales que implementan las interfaces definidas en servicios
+var (
+	libroService     servicios.ILibroService     = servicios.NewLibroService()
+	autorService     servicios.IAutorService     = servicios.NewAutorService()
+	categoriaService servicios.ICategoriaService = servicios.NewCategoriaService()
+	prestamoService  servicios.IPrestamoService  = servicios.NewPrestamoService()
+)
 
 func main() {
 	cargarDatosPredeterminados()
@@ -34,23 +43,23 @@ func main() {
 		case "1":
 			agregarLibro()
 		case "2":
-			servicios.VerLibros()
+			verLibros()
 		case "3":
 			agregarAutor()
 		case "4":
-			servicios.VerAutores()
+			verAutores()
 		case "5":
 			agregarCategoria()
 		case "6":
-			servicios.VerCategorias()
+			verCategorias()
 		case "7":
 			crearPrestamo()
 		case "8":
-			servicios.VerPrestamos()
+			verPrestamos()
 		case "9":
 			registrarDevolucion()
 		case "10":
-			servicios.VerHistorialPrestamos()
+			verHistorialPrestamos()
 		case "11":
 			realizarBusqueda()
 		case "0":
@@ -65,120 +74,161 @@ func main() {
 func realizarBusqueda() {
 	query := utilidades.LeerEntrada("Ingrese texto de búsqueda: ")
 	fmt.Println("\nResultados de búsqueda en libros:")
-	resultadosLibros := servicios.BuscarLibros(query)
+	resultadosLibros := libroService.BuscarLibros(query)
 	for _, libro := range resultadosLibros {
 		fmt.Printf("ID: %d, Título: %s, Autor: %s, Categoría: %s\n", libro.ID, libro.Titulo, libro.Autor, libro.Categoria)
 	}
 
 	fmt.Println("\nResultados de búsqueda en autores:")
-	resultadosAutores := servicios.BuscarAutores(query)
+	resultadosAutores := autorService.BuscarAutores(query)
 	for _, autor := range resultadosAutores {
 		fmt.Printf("ID: %d, Nombre: %s\n", autor.ID, autor.Nombre)
 	}
 
 	fmt.Println("\nResultados de búsqueda en categorías:")
-	resultadosCategorias := servicios.BuscarCategorias(query)
+	resultadosCategorias := categoriaService.BuscarCategorias(query)
 	for _, categoria := range resultadosCategorias {
 		fmt.Printf("ID: %d, Nombre: %s\n", categoria.ID, categoria.Nombre)
 	}
 }
 
 func cargarDatosPredeterminados() {
-	servicios.AgregarAutor(modelos.Autor{Nombre: "Gabriel García Márquez"})
-	servicios.AgregarAutor(modelos.Autor{Nombre: "Isabel Allende"})
-	servicios.AgregarAutor(modelos.Autor{Nombre: "J.K. Rowling"})
+	_ = autorService.AgregarAutor(modelos.Autor{Nombre: "Gabriel García Márquez"})
+	_ = autorService.AgregarAutor(modelos.Autor{Nombre: "Isabel Allende"})
+	_ = autorService.AgregarAutor(modelos.Autor{Nombre: "J.K. Rowling"})
 
-	servicios.AgregarCategoria(modelos.Categoria{Nombre: "Literatura"})
-	servicios.AgregarCategoria(modelos.Categoria{Nombre: "Fantasía"})
-	servicios.AgregarCategoria(modelos.Categoria{Nombre: "Ciencia Ficción"})
+	_ = categoriaService.AgregarCategoria(modelos.Categoria{Nombre: "Literatura"})
+	_ = categoriaService.AgregarCategoria(modelos.Categoria{Nombre: "Fantasía"})
+	_ = categoriaService.AgregarCategoria(modelos.Categoria{Nombre: "Ciencia Ficción"})
 
-	servicios.AgregarLibro(modelos.Libro{Titulo: "Cien Años de Soledad", Autor: "Gabriel García Márquez", Categoria: "Literatura"})
-	servicios.AgregarLibro(modelos.Libro{Titulo: "La Casa de los Espíritus", Autor: "Isabel Allende", Categoria: "Literatura"})
-	servicios.AgregarLibro(modelos.Libro{Titulo: "Harry Potter y la Piedra Filosofal", Autor: "J.K. Rowling", Categoria: "Fantasía"})
+	_ = libroService.AgregarLibro(modelos.Libro{Titulo: "Cien Años de Soledad", Autor: "Gabriel García Márquez", Categoria: "Literatura"})
+	_ = libroService.AgregarLibro(modelos.Libro{Titulo: "La Casa de los Espíritus", Autor: "Isabel Allende", Categoria: "Literatura"})
+	_ = libroService.AgregarLibro(modelos.Libro{Titulo: "Harry Potter y la Piedra Filosofal", Autor: "J.K. Rowling", Categoria: "Fantasía"})
 	fmt.Println("Datos predeterminados cargados exitosamente.")
 }
 
 func agregarLibro() {
 	titulo := utilidades.LeerEntrada("Ingrese el título del libro: ")
-	if servicios.ExisteLibro(titulo) {
+	existe := libroService.ExisteLibro(titulo)
+	if existe {
 		fmt.Println("El libro ya existe en el sistema.")
 		return
 	}
 
-	servicios.VerCategorias()
-	categoriaID, _ := strconv.Atoi(utilidades.LeerEntrada("Seleccione el ID de la categoría: "))
-	categoria, existe := servicios.ObtenerCategoriaPorID(categoriaID)
-	if !existe {
+	verCategorias()
+	categoriaID, err := strconv.Atoi(utilidades.LeerEntrada("Seleccione el ID de la categoría: "))
+	if err != nil {
+		fmt.Println("ID inválido.")
+		return
+	}
+	categoria, existeCat := categoriaService.ObtenerCategoriaPorID(categoriaID)
+	if !existeCat {
 		fmt.Println("Categoría no encontrada.")
 		return
 	}
 
-	servicios.VerAutores()
-	autorID, _ := strconv.Atoi(utilidades.LeerEntrada("Seleccione el ID del autor: "))
-	autor, existe := servicios.ObtenerAutorPorID(autorID)
-	if !existe {
+	verAutores()
+	autorID, err := strconv.Atoi(utilidades.LeerEntrada("Seleccione el ID del autor: "))
+	if err != nil {
+		fmt.Println("ID inválido.")
+		return
+	}
+	autor, existeAut := autorService.ObtenerAutorPorID(autorID)
+	if !existeAut {
 		fmt.Println("Autor no encontrado.")
 		return
 	}
 
-	servicios.AgregarLibro(modelos.Libro{Titulo: titulo, Autor: autor.Nombre, Categoria: categoria.Nombre})
+	err = libroService.AgregarLibro(modelos.Libro{Titulo: titulo, Autor: autor.Nombre, Categoria: categoria.Nombre})
+	if err != nil {
+		fmt.Println("Error al agregar libro:", err)
+		return
+	}
 	fmt.Println("Libro agregado correctamente.")
 }
 
 func agregarAutor() {
 	nombre := utilidades.LeerEntrada("Ingrese el nombre del autor: ")
-	if servicios.ExisteAutor(nombre) {
+	if autorService.ExisteAutor(nombre) {
 		fmt.Println("El autor ya existe en el sistema.")
 		return
 	}
-	servicios.AgregarAutor(modelos.Autor{Nombre: nombre})
+	if err := autorService.AgregarAutor(modelos.Autor{Nombre: nombre}); err != nil {
+		fmt.Println("Error al agregar autor:", err)
+		return
+	}
 	fmt.Println("Autor agregado correctamente.")
 }
 
 func agregarCategoria() {
 	nombre := utilidades.LeerEntrada("Ingrese el nombre de la categoría: ")
-	if servicios.ExisteCategoria(nombre) {
+	if categoriaService.ExisteCategoria(nombre) {
 		fmt.Println("La categoría ya existe en el sistema.")
 		return
 	}
-	servicios.AgregarCategoria(modelos.Categoria{Nombre: nombre})
+	if err := categoriaService.AgregarCategoria(modelos.Categoria{Nombre: nombre}); err != nil {
+		fmt.Println("Error al agregar categoría:", err)
+		return
+	}
 	fmt.Println("Categoría agregada correctamente.")
 }
 
-// Función para crear un préstamo
 func crearPrestamo() {
 	fmt.Println("\n--- Lista de Libros Disponibles (ID) ---")
-	servicios.VerLibros()
+	verLibros()
 
 	libroIDStr := utilidades.LeerEntrada("Ingrese el ID del libro para el préstamo: ")
-	libroID, _ := strconv.Atoi(libroIDStr)
-	libro, existe := servicios.ObtenerLibroPorID(libroID)
+	libroID, err := strconv.Atoi(libroIDStr)
+	if err != nil {
+		fmt.Println("ID de libro inválido.")
+		return
+	}
+	libro, existe := libroService.ObtenerLibroPorID(libroID)
 	if !existe {
 		fmt.Println("El libro no está disponible en la biblioteca.")
 		return
 	}
 
 	estudiante := utilidades.LeerEntrada("Ingrese el nombre del estudiante: ")
-	servicios.CrearPrestamo(libroID, libro.Titulo, estudiante, limiteMaximoPrestamos)
+	if err := prestamoService.CrearPrestamo(libroID, libro.Titulo, estudiante, limiteMaximoPrestamos); err != nil {
+		fmt.Println("Error al crear préstamo:", err)
+		return
+	}
 }
 
 func registrarDevolucion() {
-	libroID, _ := strconv.Atoi(utilidades.LeerEntrada("Ingrese el ID del libro devuelto: "))
-	if servicios.RegistrarDevolucion(libroID) {
-		fmt.Println("Devolución registrada exitosamente.")
-	} else {
-		fmt.Println("No se encontró un préstamo activo para este libro.")
-	}
-}
-
-// Función para configurar el sistema
-func configurarSistema() {
-	maxPrestamosStr := utilidades.LeerEntrada("Ingrese el límite máximo de préstamos por estudiante: ")
-	maxPrestamos, err := strconv.Atoi(maxPrestamosStr)
-	if err != nil || maxPrestamos <= 0 {
-		fmt.Println("El valor ingresado no es válido.")
+	libroID, err := strconv.Atoi(utilidades.LeerEntrada("Ingrese el ID del libro devuelto: "))
+	if err != nil {
+		fmt.Println("ID inválido.")
 		return
 	}
-	limiteMaximoPrestamos = maxPrestamos
-	fmt.Printf("Configuración actualizada: Límite máximo de préstamos establecido en %d.\n", limiteMaximoPrestamos)
+	if err := prestamoService.RegistrarDevolucion(libroID); err != nil {
+		if errors.Is(err, servicios.ErrPrestamoNoEncontrado) {
+			fmt.Println("No se encontró un préstamo activo para este libro.")
+		} else {
+			fmt.Println("Error al registrar devolución:", err)
+		}
+		return
+	}
+	fmt.Println("Devolución registrada exitosamente.")
+}
+
+func verLibros() {
+	libroService.VerLibros()
+}
+
+func verAutores() {
+	autorService.VerAutores()
+}
+
+func verCategorias() {
+	categoriaService.VerCategorias()
+}
+
+func verPrestamos() {
+	prestamoService.VerPrestamos()
+}
+
+func verHistorialPrestamos() {
+	prestamoService.VerHistorialPrestamos()
 }

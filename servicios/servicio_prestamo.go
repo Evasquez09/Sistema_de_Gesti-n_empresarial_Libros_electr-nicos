@@ -1,22 +1,39 @@
 package servicios
 
 import (
+	"errors"
 	"fmt"
 	"sistema_gestion_libros/modelos"
 	"sistema_gestion_libros/utilidades"
 	"time"
 )
 
-var prestamos []modelos.Prestamo
-var historialPrestamos []modelos.Prestamo
+// Errores específicos para el manejo de préstamos
+var (
+	ErrPrestamoNoEncontrado = errors.New("no se encontró un préstamo activo para este libro")
+	ErrLimitePrestamos      = errors.New("se alcanzó el límite máximo de préstamos para este estudiante")
+)
 
-// Crear un préstamo
-func CrearPrestamo(libroID int, libroTitulo, estudiante string, limiteMaximo int) {
-	// Verificar si el estudiante ya excede el límite de préstamos
-	conteoPrestamos := contarPrestamosPorEstudiante(estudiante)
-	if conteoPrestamos >= limiteMaximo {
-		fmt.Printf("El estudiante '%s' ya alcanzó el límite máximo de préstamos (%d).\n", estudiante, limiteMaximo)
-		return
+type prestamoService struct {
+	prestamos          []modelos.Prestamo
+	historialPrestamos []modelos.Prestamo
+}
+
+// NewPrestamoService crea una nueva instancia del servicio de préstamos
+func NewPrestamoService() IPrestamoService {
+	return &prestamoService{
+		prestamos:          []modelos.Prestamo{},
+		historialPrestamos: []modelos.Prestamo{},
+	}
+}
+
+// CrearPrestamo crea un préstamo para un estudiante y un libro determinado.
+// Verifica el límite de préstamos permitido antes de crear el nuevo préstamo.
+func (s *prestamoService) CrearPrestamo(libroID int, libroTitulo, estudiante string, limiteMaximo int) error {
+	// Verificar si el estudiante excede el límite de préstamos
+	conteo := s.contarPrestamosPorEstudiante(estudiante)
+	if conteo >= limiteMaximo {
+		return ErrLimitePrestamos
 	}
 
 	enlace := utilidades.GenerarEnlaceUnico()
@@ -27,52 +44,54 @@ func CrearPrestamo(libroID int, libroTitulo, estudiante string, limiteMaximo int
 		Fecha:      time.Now(),
 		Enlace:     enlace,
 	}
-	prestamos = append(prestamos, prestamo)
+	s.prestamos = append(s.prestamos, prestamo)
 	fmt.Printf("Préstamo creado para el libro '%s'. Enlace de acceso: %s\n", libroTitulo, enlace)
+	return nil
 }
 
-// Registrar devolución de un libro
-func RegistrarDevolucion(libroID int) bool {
-	for i, prestamo := range prestamos {
+// RegistrarDevolucion procesa la devolución de un libro. Si no se encuentra el préstamo activo se devuelve un error.
+func (s *prestamoService) RegistrarDevolucion(libroID int) error {
+	for i, prestamo := range s.prestamos {
 		if prestamo.LibroID == libroID {
-			historialPrestamos = append(historialPrestamos, prestamo)
-			prestamos = append(prestamos[:i], prestamos[i+1:]...)
+			s.historialPrestamos = append(s.historialPrestamos, prestamo)
+			s.prestamos = append(s.prestamos[:i], s.prestamos[i+1:]...)
 			fmt.Printf("Devolución registrada: Libro '%s' del estudiante '%s'.\n", prestamo.Libro, prestamo.Estudiante)
-			return true
+			return nil
 		}
 	}
-	return false
+	return ErrPrestamoNoEncontrado
 }
 
-// Ver historial de préstamos
-func VerHistorialPrestamos() {
+// VerHistorialPrestamos muestra el historial de préstamos
+func (s *prestamoService) VerHistorialPrestamos() {
 	fmt.Println("\n--- Historial de Préstamos ---")
-	for _, prestamo := range historialPrestamos {
+	for _, prestamo := range s.historialPrestamos {
 		fmt.Printf("Libro: %s, Estudiante: %s, Fecha: %s\n",
 			prestamo.Libro, prestamo.Estudiante, prestamo.Fecha.Format("02-01-2006"))
 	}
 }
 
-// Contar los préstamos activos de un estudiante
-func contarPrestamosPorEstudiante(estudiante string) int {
+// VerPrestamos muestra la lista de préstamos activos
+func (s *prestamoService) VerPrestamos() {
+	fmt.Println("\n--- Lista de Préstamos Activos ---")
+	if len(s.prestamos) == 0 {
+		fmt.Println("No hay préstamos activos en este momento.")
+		return
+	}
+	for _, prestamo := range s.prestamos {
+		fmt.Printf("ID del Libro: %d, Libro: %s, Estudiante: %s, Fecha: %s, Enlace: %s\n",
+			prestamo.LibroID, prestamo.Libro, prestamo.Estudiante, prestamo.Fecha.Format("02-01-2006"), prestamo.Enlace)
+	}
+}
+
+// contarPrestamosPorEstudiante retorna el número de préstamos activos para un estudiante dado.
+// Esta función es interna del servicio y ejemplifica el concepto de encapsulación.
+func (s *prestamoService) contarPrestamosPorEstudiante(estudiante string) int {
 	conteo := 0
-	for _, prestamo := range prestamos {
+	for _, prestamo := range s.prestamos {
 		if prestamo.Estudiante == estudiante {
 			conteo++
 		}
 	}
 	return conteo
-}
-
-// Función para ver los préstamos activos
-func VerPrestamos() {
-	fmt.Println("\n--- Lista de Préstamos Activos ---")
-	if len(prestamos) == 0 {
-		fmt.Println("No hay préstamos activos en este momento.")
-		return
-	}
-	for _, prestamo := range prestamos {
-		fmt.Printf("ID del Libro: %d, Libro: %s, Estudiante: %s, Fecha: %s, Enlace: %s\n",
-			prestamo.LibroID, prestamo.Libro, prestamo.Estudiante, prestamo.Fecha.Format("02-01-2006"), prestamo.Enlace)
-	}
 }
