@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Autores</title>
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        h1, h2 {
+            color: #ffffff;
+            text-align: center;
+            background-color: #2c3e50;
+            padding: 10px;
+            margin: 10px;
+        }
+
+        h2 {
+            background-color: #34495e;
+        }
+
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #2980b9;
+            color: #ffffff;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        form {
+            display: inline-block;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #2980b9;
+            color: #ffffff;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3498db;
+        }
+
+        .add-author-form, .back-to-menu {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-to-menu a {
+            text-decoration: none;
+            background-color: #2980b9;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .back-to-menu a:hover {
+            background-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gestión de Autores</h1>
+
+    <h2>Lista de Autores</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .}}
+            <tr>
+                <td>{{.ID}}</td>
+                <td>{{.Nombre}}</td>
+                <td>
+                    <!-- Formulario para editar autor -->
+                    <form method="post" action="/autores">
+                        <input type="hidden" name="_method" value="PUT">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <input type="text" name="nombre" placeholder="Nuevo nombre" required>
+                        <button type="submit">Editar</button>
+                    </form>
+
+                    <!-- Formulario para eliminar autor -->
+                    <form method="post" action="/autores">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <button type="submit">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="3">No hay autores disponibles</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    <div class="add-author-form">
+        <h2>Agregar Autor</h2>
+        <form method="post" action="/autores">
+            <label for="nombre">Nombre:</label>
+            <input type="text" name="nombre" id="nombre" required>
+            <button type="submit">Agregar Autor</button>
+        </form>
+    </div>
+
+    <div class="back-to-menu">
+        <a href="/">Volver al Menú Principal</a>
+    </div>
+</body>
+</html>

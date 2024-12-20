@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>Sistema de Gestión de Libros Electrónicos</h1>
+        <nav>
+            <ul>
+                <li><a href="/autores">Autores</a></li>
+                <li><a href="/categorias">Categorías</a></li>
+                <li><a href="/libros">Libros</a></li>
+                <li><a href="/prestamos">Préstamos</a></li>
+                <li><a href="/buscar">Búsqueda</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {{ template "content" . }}
+    </main>
+</body>
+</html>

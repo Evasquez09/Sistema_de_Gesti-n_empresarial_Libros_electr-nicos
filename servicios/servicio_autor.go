@@ -1,75 +1,116 @@
 package servicios
 
 import (
-	"errors"
+	"database/sql"
 	"fmt"
+	"log"
 	"sistema_gestion_libros/modelos"
 	"strings"
 )
 
-// Se encapsulan las variables en una estructura y se accede a ellas a través de métodos
 type autorService struct {
-	autores        []modelos.Autor
-	autorIDCounter int
+	db *sql.DB
 }
 
-// NewAutorService crea una nueva instancia del servicio de autores
-func NewAutorService() IAutorService {
-	return &autorService{
-		autores:        []modelos.Autor{},
-		autorIDCounter: 1,
-	}
+func NewAutorService(db *sql.DB) IAutorService {
+	return &autorService{db: db}
 }
 
-// AgregarAutor agrega un autor a la lista de autores
 func (s *autorService) AgregarAutor(autor modelos.Autor) error {
-	for _, a := range s.autores {
-		if a.Nombre == autor.Nombre {
-			return errors.New("el autor ya existe en el sistema")
-		}
+	_, err := s.db.Exec("INSERT INTO autores (nombre) VALUES (?)", autor.Nombre)
+	return err
+}
+
+func (s *autorService) ActualizarAutor(autor modelos.Autor) error {
+	res, err := s.db.Exec("UPDATE autores SET nombre=? WHERE id=?", autor.Nombre, autor.ID)
+	if err != nil {
+		return err
 	}
-	autor.ID = s.autorIDCounter
-	s.autores = append(s.autores, autor)
-	s.autorIDCounter++
-	fmt.Printf("Autor agregado correctamente: %s (ID: %d)\n", autor.Nombre, autor.ID)
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("autor con ID %d no encontrado", autor.ID)
+	}
 	return nil
 }
 
-// ExisteAutor verifica si existe un autor con el nombre dado
+func (s *autorService) EliminarAutor(id int) error {
+	res, err := s.db.Exec("DELETE FROM autores WHERE id=?", id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("autor con ID %d no encontrado", id)
+	}
+	return nil
+}
+
+func (s *autorService) ObtenerTodos() []modelos.Autor {
+	rows, err := s.db.Query("SELECT id, nombre FROM autores")
+	if err != nil {
+		return []modelos.Autor{}
+	}
+	defer rows.Close()
+
+	var autores []modelos.Autor
+	for rows.Next() {
+		var autor modelos.Autor
+		rows.Scan(&autor.ID, &autor.Nombre)
+		autores = append(autores, autor)
+	}
+	return autores
+}
+
 func (s *autorService) ExisteAutor(nombre string) bool {
-	for _, autor := range s.autores {
-		if autor.Nombre == nombre {
-			return true
-		}
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM autores WHERE nombre = ?", nombre).Scan(&count)
+	if err != nil {
+		return false
 	}
-	return false
+	return count > 0
 }
 
-// ObtenerAutorPorID obtiene un autor por su ID
 func (s *autorService) ObtenerAutorPorID(id int) (modelos.Autor, bool) {
-	for _, autor := range s.autores {
-		if autor.ID == id {
-			return autor, true
-		}
+	var autor modelos.Autor
+	err := s.db.QueryRow("SELECT id, nombre FROM autores WHERE id = ?", id).Scan(&autor.ID, &autor.Nombre)
+	if err != nil {
+		return modelos.Autor{}, false
 	}
-	return modelos.Autor{}, false
+	return autor, true
 }
 
-// VerAutores muestra la lista de autores
 func (s *autorService) VerAutores() {
-	fmt.Println("\n--- Lista de Autores ---")
-	for _, autor := range s.autores {
+	rows, err := s.db.Query("SELECT id, nombre FROM autores")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var autor modelos.Autor
+		rows.Scan(&autor.ID, &autor.Nombre)
 		fmt.Printf("ID: %d, Nombre: %s\n", autor.ID, autor.Nombre)
 	}
 }
 
-// BuscarAutores busca autores por nombre parcial
 func (s *autorService) BuscarAutores(query string) []modelos.Autor {
-	var resultados []modelos.Autor
-	for _, autor := range s.autores {
-		if strings.Contains(strings.ToLower(autor.Nombre), strings.ToLower(query)) {
-			resultados = append(resultados, autor)
-		}
+	q := "%" + strings.ToLower(query) + "%"
+	rows, err := s.db.Query("SELECT id, nombre FROM autores WHERE LOWER(nombre) LIKE ?", q)
+	if err != nil {
+		log.Println("Error en la búsqueda de autores:", err) // Log para depurar
+		return []modelos.Autor{}
 	}
-	return resultados
+	defer rows.Close()
+
+	var autores []modelos.Autor
+	for rows.Next() {
+		var a modelos.Autor
+		err := rows.Scan(&a.ID, &a.Nombre)
+		if err != nil {
+			log.Println("Error al escanear autor:", err) // Log para depurar
+			continue
+		}
+		autores = append(autores, a)
+	}
+	return autores
 }

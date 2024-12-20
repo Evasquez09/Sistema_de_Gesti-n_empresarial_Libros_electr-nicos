@@ -1,76 +1,114 @@
 package servicios
 
 import (
-	"errors"
+	"database/sql"
 	"fmt"
+	"log"
 	"sistema_gestion_libros/modelos"
 	"strings"
 )
 
 type libroService struct {
-	libros         []modelos.Libro
-	libroIDCounter int
+	db *sql.DB
 }
 
-// NewLibroService crea una instancia del servicio de libros
-func NewLibroService() ILibroService {
-	return &libroService{
-		libros:         []modelos.Libro{},
-		libroIDCounter: 1,
-	}
+func NewLibroService(db *sql.DB) ILibroService {
+	return &libroService{db: db}
 }
 
-// AgregarLibro agrega un libro a la lista
 func (s *libroService) AgregarLibro(libro modelos.Libro) error {
-	for _, l := range s.libros {
-		if l.Titulo == libro.Titulo {
-			return errors.New("el libro ya existe en el sistema")
-		}
+	_, err := s.db.Exec("INSERT INTO libros (titulo, autor, categoria) VALUES (?, ?, ?)", libro.Titulo, libro.Autor, libro.Categoria)
+	return err
+}
+
+func (s *libroService) ActualizarLibro(libro modelos.Libro) error {
+	res, err := s.db.Exec("UPDATE libros SET titulo=?, autor=?, categoria=? WHERE id=?", libro.Titulo, libro.Autor, libro.Categoria, libro.ID)
+	if err != nil {
+		return err
 	}
-	libro.ID = s.libroIDCounter
-	s.libros = append(s.libros, libro)
-	s.libroIDCounter++
-	fmt.Printf("Libro agregado correctamente: %s (ID: %d)\n", libro.Titulo, libro.ID)
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("libro con ID %d no encontrado", libro.ID)
+	}
 	return nil
 }
 
-// ExisteLibro verifica si un libro existe por título
+func (s *libroService) EliminarLibro(id int) error {
+	res, err := s.db.Exec("DELETE FROM libros WHERE id=?", id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("libro con ID %d no encontrado", id)
+	}
+	return nil
+}
+
 func (s *libroService) ExisteLibro(titulo string) bool {
-	for _, libro := range s.libros {
-		if libro.Titulo == titulo {
-			return true
-		}
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM libros WHERE titulo = ?", titulo).Scan(&count)
+	if err != nil {
+		return false
 	}
-	return false
+	return count > 0
 }
 
-// ObtenerLibroPorID obtiene un libro por su ID
 func (s *libroService) ObtenerLibroPorID(id int) (modelos.Libro, bool) {
-	for _, libro := range s.libros {
-		if libro.ID == id {
-			return libro, true
-		}
+	var l modelos.Libro
+	err := s.db.QueryRow("SELECT id, titulo, autor, categoria FROM libros WHERE id=?", id).Scan(&l.ID, &l.Titulo, &l.Autor, &l.Categoria)
+	if err != nil {
+		return modelos.Libro{}, false
 	}
-	return modelos.Libro{}, false
+	return l, true
 }
 
-// VerLibros muestra la lista completa de libros
 func (s *libroService) VerLibros() {
-	fmt.Println("\n--- Lista de Libros ---")
-	for _, libro := range s.libros {
-		fmt.Printf("ID: %d, Título: %s, Autor: %s, Categoría: %s\n", libro.ID, libro.Titulo, libro.Autor, libro.Categoria)
+	rows, err := s.db.Query("SELECT id, titulo, autor, categoria FROM libros")
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var l modelos.Libro
+		rows.Scan(&l.ID, &l.Titulo, &l.Autor, &l.Categoria)
+		// imprimir si se desea
 	}
 }
 
-// BuscarLibros busca libros por título, autor o categoría
 func (s *libroService) BuscarLibros(query string) []modelos.Libro {
-	var resultados []modelos.Libro
-	for _, libro := range s.libros {
-		if strings.Contains(strings.ToLower(libro.Titulo), strings.ToLower(query)) ||
-			strings.Contains(strings.ToLower(libro.Autor), strings.ToLower(query)) ||
-			strings.Contains(strings.ToLower(libro.Categoria), strings.ToLower(query)) {
-			resultados = append(resultados, libro)
-		}
+	q := "%" + strings.ToLower(query) + "%"
+	rows, err := s.db.Query("SELECT id, titulo, autor, categoria FROM libros WHERE LOWER(titulo) LIKE ? OR LOWER(autor) LIKE ? OR LOWER(categoria) LIKE ?", q, q, q)
+	if err != nil {
+		log.Println("Error en la búsqueda de libros:", err) // Log para depurar
+		return []modelos.Libro{}
 	}
-	return resultados
+	defer rows.Close()
+
+	var libros []modelos.Libro
+	for rows.Next() {
+		var l modelos.Libro
+		err := rows.Scan(&l.ID, &l.Titulo, &l.Autor, &l.Categoria)
+		if err != nil {
+			log.Println("Error al escanear libro:", err) // Log para depurar
+			continue
+		}
+		libros = append(libros, l)
+	}
+	return libros
+}
+
+func (s *libroService) ObtenerTodos() []modelos.Libro {
+	rows, err := s.db.Query("SELECT id, titulo, autor, categoria FROM libros")
+	if err != nil {
+		return []modelos.Libro{}
+	}
+	defer rows.Close()
+	var libros []modelos.Libro
+	for rows.Next() {
+		var l modelos.Libro
+		rows.Scan(&l.ID, &l.Titulo, &l.Autor, &l.Categoria)
+		libros = append(libros, l)
+	}
+	return libros
 }

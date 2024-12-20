@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados de Búsqueda</title>
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        h1, h2 {
+            color: #ffffff;
+            text-align: center;
+            background-color: #2c3e50;
+            padding: 10px;
+            margin: 10px;
+        }
+
+        h2 {
+            background-color: #34495e;
+        }
+
+        p {
+            color: #666;
+            text-align: center;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px auto;
+            max-width: 800px;
+        }
+
+        li {
+            background-color: #ffffff;
+            margin: 10px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        a {
+            text-decoration: none;
+            background-color: #2980b9;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: inline-block;
+            transition: background-color 0.3s;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        a:hover {
+            background-color: #3498db;
+        }
+
+        .container {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .results-section {
+            margin-bottom: 20px;
+        }
+
+        /* Estilo para el fondo */
+        .background {
+            background-color: #2c3e50;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilo para el encabezado */
+        .header {
+            background-color: #34495e;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Estilo para el pie de página */
+        .footer {
+            background-color: #34495e;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background">
+        <header class="header">
+            <h1>Resultados de Búsqueda</h1>
+        </header>
+        <main class="container">
+            <section class="results-section">
+                <h2>Libros</h2>
+                <ul>
+                    {{range .libros}}
+                    <li>{{.Titulo}} - Autor: {{.Autor}} - Categoría: {{.Categoria}}</li>
+                    {{else}}
+                    <li>No se encontraron libros</li>
+                    {{end}}
+                </ul>
+            </section>
+
+            <section class="results-section">
+                <h2>Autores</h2>
+                <ul>
+                    {{range .autores}}
+                    <li>{{.Nombre}}</li>
+                    {{else}}
+                    <li>No se encontraron autores</li>
+                    {{end}}
+                </ul>
+            </section>
+
+            <section class="results-section">
+                <h2>Categorías</h2>
+                <ul>
+                    {{range .categorias}}
+                    <li>{{.Nombre}}</li>
+                    {{else}}
+                    <li>No se encontraron categorías</li>
+                    {{end}}
+                </ul>
+            </section>
+
+            <a href="/">Volver al Inicio</a>
+        </main>
+        <footer class="footer">
+            <p>&copy; 2024 Sistema de Gestión de Libros Electrónicos. Todos los derechos reservados.</p>
+        </footer>
+    </div>
+</body>
+</html>

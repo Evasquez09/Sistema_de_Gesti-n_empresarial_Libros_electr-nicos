@@ -1,97 +1,105 @@
 package servicios
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"sistema_gestion_libros/modelos"
-	"sistema_gestion_libros/utilidades"
 	"time"
 )
 
-// Errores específicos para el manejo de préstamos
 var (
 	ErrPrestamoNoEncontrado = errors.New("no se encontró un préstamo activo para este libro")
 	ErrLimitePrestamos      = errors.New("se alcanzó el límite máximo de préstamos para este estudiante")
 )
 
 type prestamoService struct {
-	prestamos          []modelos.Prestamo
-	historialPrestamos []modelos.Prestamo
+	db *sql.DB
 }
 
-// NewPrestamoService crea una nueva instancia del servicio de préstamos
-func NewPrestamoService() IPrestamoService {
-	return &prestamoService{
-		prestamos:          []modelos.Prestamo{},
-		historialPrestamos: []modelos.Prestamo{},
-	}
-}
-
-// CrearPrestamo crea un préstamo para un estudiante y un libro determinado.
-// Verifica el límite de préstamos permitido antes de crear el nuevo préstamo.
 func (s *prestamoService) CrearPrestamo(libroID int, libroTitulo, estudiante string, limiteMaximo int) error {
-	// Verificar si el estudiante excede el límite de préstamos
-	conteo := s.contarPrestamosPorEstudiante(estudiante)
-	if conteo >= limiteMaximo {
-		return ErrLimitePrestamos
+	// Lógica de creación de préstamo
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM prestamos WHERE estudiante = ?", estudiante).Scan(&count)
+	if err != nil {
+		return err
 	}
+	if count >= limiteMaximo {
+		return fmt.Errorf("El estudiante %s ha alcanzado el límite de préstamos", estudiante)
+	}
+	fechaPrestamo := time.Now()
+	fechaDevolucion := fechaPrestamo.AddDate(0, 0, 30) // 30 días de préstamo
+	_, err = s.db.Exec("INSERT INTO prestamos (libro_id, libro, estudiante, fecha_prestamo, fecha_devolucion) VALUES (?, ?, ?, ?, ?)",
+		libroID, libroTitulo, estudiante, fechaPrestamo, fechaDevolucion)
+	return err
+}
 
-	enlace := utilidades.GenerarEnlaceUnico()
-	prestamo := modelos.Prestamo{
-		LibroID:    libroID,
-		Libro:      libroTitulo,
-		Estudiante: estudiante,
-		Fecha:      time.Now(),
-		Enlace:     enlace,
+func (s *prestamoService) RegistrarDevolucion(libroID int) error {
+	res, err := s.db.Exec("DELETE FROM prestamos WHERE libro_id = ?", libroID)
+	if err != nil {
+		return err
 	}
-	s.prestamos = append(s.prestamos, prestamo)
-	fmt.Printf("Préstamo creado para el libro '%s'. Enlace de acceso: %s\n", libroTitulo, enlace)
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("Préstamo no encontrado para el libro con ID %d", libroID)
+	}
 	return nil
 }
 
-// RegistrarDevolucion procesa la devolución de un libro. Si no se encuentra el préstamo activo se devuelve un error.
-func (s *prestamoService) RegistrarDevolucion(libroID int) error {
-	for i, prestamo := range s.prestamos {
-		if prestamo.LibroID == libroID {
-			s.historialPrestamos = append(s.historialPrestamos, prestamo)
-			s.prestamos = append(s.prestamos[:i], s.prestamos[i+1:]...)
-			fmt.Printf("Devolución registrada: Libro '%s' del estudiante '%s'.\n", prestamo.Libro, prestamo.Estudiante)
-			return nil
+func (s *prestamoService) ObtenerActivos() []modelos.Prestamo {
+	rows, err := s.db.Query("SELECT libro_id, libro, estudiante, fecha_prestamo, fecha_devolucion FROM prestamos")
+	if err != nil {
+		return []modelos.Prestamo{}
+	}
+	defer rows.Close()
+	var prestamos []modelos.Prestamo
+	for rows.Next() {
+		var p modelos.Prestamo
+		err := rows.Scan(&p.LibroID, &p.Libro, &p.Estudiante, &p.FechaPrestamo, &p.FechaDevolucion)
+		if err != nil {
+			continue
 		}
+		prestamos = append(prestamos, p)
 	}
-	return ErrPrestamoNoEncontrado
+	return prestamos
 }
 
-// VerHistorialPrestamos muestra el historial de préstamos
+func NewPrestamoService(db *sql.DB) IPrestamoService {
+	return &prestamoService{db: db}
+}
+
 func (s *prestamoService) VerHistorialPrestamos() {
-	fmt.Println("\n--- Historial de Préstamos ---")
-	for _, prestamo := range s.historialPrestamos {
-		fmt.Printf("Libro: %s, Estudiante: %s, Fecha: %s\n",
-			prestamo.Libro, prestamo.Estudiante, prestamo.Fecha.Format("02-01-2006"))
-	}
-}
-
-// VerPrestamos muestra la lista de préstamos activos
-func (s *prestamoService) VerPrestamos() {
-	fmt.Println("\n--- Lista de Préstamos Activos ---")
-	if len(s.prestamos) == 0 {
-		fmt.Println("No hay préstamos activos en este momento.")
+	rows, err := s.db.Query("SELECT libro_id, libro, estudiante, fecha_prestamo, fecha_devolucion, enlace FROM prestamos")
+	if err != nil {
+		fmt.Println("Error:", err)
 		return
 	}
-	for _, prestamo := range s.prestamos {
-		fmt.Printf("ID del Libro: %d, Libro: %s, Estudiante: %s, Fecha: %s, Enlace: %s\n",
-			prestamo.LibroID, prestamo.Libro, prestamo.Estudiante, prestamo.Fecha.Format("02-01-2006"), prestamo.Enlace)
+	defer rows.Close()
+	fmt.Println("\n--- Historial de Préstamos ---")
+	for rows.Next() {
+		var p modelos.Prestamo
+		rows.Scan(&p.LibroID, &p.Libro, &p.Estudiante, &p.FechaPrestamo, &p.FechaDevolucion, &p.Enlace)
+		fmt.Printf("ID Libro: %d, Libro: %s, Estudiante: %s, Fecha de Préstamo: %s, Fecha de Devolución: %s, Enlace: %s\n",
+			p.LibroID, p.Libro, p.Estudiante, p.FechaPrestamo.Format("02-01-2006"), p.FechaDevolucion.Format("02-01-2006"), p.Enlace)
 	}
 }
 
-// contarPrestamosPorEstudiante retorna el número de préstamos activos para un estudiante dado.
-// Esta función es interna del servicio y ejemplifica el concepto de encapsulación.
-func (s *prestamoService) contarPrestamosPorEstudiante(estudiante string) int {
-	conteo := 0
-	for _, prestamo := range s.prestamos {
-		if prestamo.Estudiante == estudiante {
-			conteo++
-		}
+func (s *prestamoService) VerPrestamos() {
+	rows, err := s.db.Query("SELECT libro_id, libro, estudiante, fecha_prestamo, fecha_devolucion, enlace FROM prestamos")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
 	}
-	return conteo
+	defer rows.Close()
+	fmt.Println("\n--- Lista de Préstamos Activos ---")
+	for rows.Next() {
+		var p modelos.Prestamo
+		rows.Scan(&p.LibroID, &p.Libro, &p.Estudiante, &p.FechaPrestamo, &p.FechaDevolucion, &p.Enlace)
+		fmt.Printf("ID Libro: %d, Libro: %s, Estudiante: %s, Fecha de Préstamo: %s, Fecha de Devolución: %s, Enlace: %s\n",
+			p.LibroID, p.Libro, p.Estudiante, p.FechaPrestamo.Format("02-01-2006"), p.FechaDevolucion.Format("02-01-2006"), p.Enlace)
+	}
+}
+
+func (s *prestamoService) ObtenerHistorial() []modelos.Prestamo {
+	return []modelos.Prestamo{}
 }

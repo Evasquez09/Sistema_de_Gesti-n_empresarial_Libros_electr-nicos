@@ -1,0 +1,22 @@
+{{ define "content" }}
+<h2>Resultados de la búsqueda</h2>
+<p>Resultados para "{{ .Query }}":</p>
+<h3>Libros</h3>
+<ul>
+    {{ range .Libros }}
+    <li>{{ .Titulo }} - {{ .Autor }}</li>
+    {{ end }}
+</ul>
+<h3>Autores</h3>
+<ul>
+    {{ range .Autores }}
+    <li>{{ .Nombre }}</li>
+    {{ end }}
+</ul>
+<h3>Categorías</h3>
+<ul>
+    {{ range .Categorias }}
+    <li>{{ .Nombre }}</li>
+    {{ end }}
+</ul>
+{{ end }}

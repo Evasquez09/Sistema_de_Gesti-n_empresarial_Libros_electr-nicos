@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Préstamos</title>
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        h1, h2 {
+            color: #ffffff;
+            text-align: center;
+            background-color: #2c3e50;
+            padding: 10px;
+            margin: 10px;
+        }
+
+        h2 {
+            background-color: #34495e;
+        }
+
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #2980b9;
+            color: #ffffff;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        form {
+            display: inline-block;
+        }
+
+        input[type="number"], input[type="text"] {
+            padding: 5px;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #2980b9;
+            color: #ffffff;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3498db;
+        }
+
+        .create-loan-form, .back-to-menu {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-to-menu a {
+            text-decoration: none;
+            background-color: #2980b9;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .back-to-menu a:hover {
+            background-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <h1>Gestión de Préstamos</h1>
+
+    <h2>Préstamos Activos</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID Libro</th>
+                <th>Libro</th>
+                <th>Estudiante</th>
+                <th>Fecha de Préstamo</th>
+                <th>Fecha de Devolución</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .}}
+            <tr>
+                <td>{{.LibroID}}</td>
+                <td>{{.Libro}}</td>
+                <td>{{.Estudiante}}</td>
+                <td>{{.FechaPrestamo.Format "02-01-2006"}}</td>
+                <td>{{.FechaDevolucion.Format "02-01-2006"}}</td>
+                <td>
+                    <!-- Formulario para registrar devolución -->
+                    <form method="post" action="/prestamos">
+                        <input type="hidden" name="_method" value="PUT">
+                        <input type="hidden" name="libro_id" value="{{.LibroID}}">
+                        <button type="submit">Registrar Devolución</button>
+                    </form>
+
+                    <!-- Formulario para eliminar préstamo -->
+                    <form method="post" action="/prestamos">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <input type="hidden" name="libro_id" value="{{.LibroID}}">
+                        <button type="submit">Eliminar Préstamo</button>
+                    </form>
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="6">No hay préstamos activos</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+
+    <div class="create-loan-form">
+        <h2>Crear Préstamo</h2>
+        <form method="post" action="/prestamos">
+            <label for="libro_id">ID Libro:</label>
+            <input type="number" name="libro_id" id="libro_id" required>
+            <label for="estudiante">Estudiante:</label>
+            <input type="text" name="estudiante" id="estudiante" required>
+            <button type="submit">Crear Préstamo</button>
+        </form>
+    </div>
+
+    <div class="back-to-menu">
+        <a href="/">Volver al Menú Principal</a>
+    </div>
+</body>
+</html>
