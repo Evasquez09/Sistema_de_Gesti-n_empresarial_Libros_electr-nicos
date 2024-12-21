@@ -18,7 +18,7 @@
             text-align: center;
             background-color: #2c3e50;
             padding: 10px;
-            margin: 10px;
+            margin: 0;
         }
 
         h2 {
@@ -29,44 +29,41 @@
             width: 80%;
             margin: 20px auto;
             border-collapse: collapse;
-        }
-
-        table, th, td {
-            border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         th, td {
+            border: 1px solid #ccc;
             padding: 10px;
             text-align: center;
+            background-color: #fff; /* Fondo blanco para las filas */
         }
 
         th {
             background-color: #2980b9;
-            color: #ffffff;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
+            color: white;
         }
 
         form {
             display: inline-block;
         }
 
-        input[type="number"], input[type="text"] {
+        input[type="text"], input[type="number"] {
             padding: 5px;
-            margin-right: 10px;
             border-radius: 4px;
             border: 1px solid #ccc;
+            margin: 5px 0;
         }
 
         button {
             background-color: #2980b9;
-            color: #ffffff;
-            padding: 5px 10px;
+            color: white;
             border: none;
-            border-radius: 4px;
+            padding: 5px 10px;
             cursor: pointer;
+            border-radius: 4px;
             transition: background-color 0.3s;
         }
 
@@ -74,85 +71,163 @@
             background-color: #3498db;
         }
 
-        .create-loan-form, .back-to-menu {
+        .container {
+            padding: 20px;
             text-align: center;
-            margin-top: 20px;
         }
 
-        .back-to-menu a {
+        .add-loan-section {
+            margin: 20px 0;
+        }
+
+        a {
             text-decoration: none;
             background-color: #2980b9;
             color: #ffffff;
             padding: 10px 20px;
             border-radius: 5px;
+            display: inline-block;
             transition: background-color 0.3s;
         }
 
-        .back-to-menu a:hover {
+        a:hover {
             background-color: #3498db;
         }
+
+        /* Estilo para el fondo */
+        .background {
+            background-color: #2c3e50;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilo para el encabezado */
+        .header {
+            background-color: #34495e;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Estilo para el pie de página */
+        .footer {
+            background-color: #34495e;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px;
+            margin-top: auto;
+        }
     </style>
+    <script>
+        async function cargarPrestamos() {
+            try {
+                const response = await fetch('/prestamos', { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) throw new Error('Error al cargar los préstamos');
+                const prestamos = await response.json();
+
+                const tbody = document.querySelector("#prestamos-table tbody");
+                tbody.innerHTML = "";
+
+                prestamos.forEach(prestamo => {
+                    const fechaPrestamo = new Date(prestamo.FechaPrestamo).toLocaleDateString();
+                    const fechaDevolucion = new Date(prestamo.FechaDevolucion).toLocaleDateString();
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${prestamo.LibroID}</td>
+                        <td>${prestamo.Libro}</td>
+                        <td>${prestamo.Estudiante}</td>
+                        <td>${fechaPrestamo}</td>
+                        <td>${fechaDevolucion}</td>
+                        <td>
+                            <form method="post" action="/prestamos">
+                                <input type="hidden" name="_method" value="PUT">
+                                <input type="hidden" name="libro_id" value="${prestamo.LibroID}">
+                                <button type="submit">Registrar Devolución</button>
+                            </form>
+                            <form method="post" action="/prestamos">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <input type="hidden" name="libro_id" value="${prestamo.LibroID}">
+                                <button type="submit">Eliminar Préstamo</button>
+                            </form>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error(error);
+                alert("Error al cargar los préstamos");
+            }
+        }
+
+        async function agregarPrestamo(event) {
+            event.preventDefault();
+            const libroID = document.querySelector("#nuevo-prestamo-libro-id").value.trim();
+            const estudiante = document.querySelector("#nuevo-prestamo-estudiante").value.trim();
+
+            if (!libroID || !estudiante) {
+                alert("Todos los campos son obligatorios");
+                return;
+            }
+
+            try {
+                const response = await fetch('/prestamos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `libro_id=${encodeURIComponent(libroID)}&estudiante=${encodeURIComponent(estudiante)}`
+                });
+                if (!response.ok) throw new Error('Error al agregar el préstamo');
+                document.querySelector("#nuevo-prestamo-libro-id").value = "";
+                document.querySelector("#nuevo-prestamo-estudiante").value = "";
+                await cargarPrestamos();
+            } catch (error) {
+                console.error(error);
+                alert("Error al agregar el préstamo");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            cargarPrestamos();
+            document.querySelector("#agregar-prestamo-form").addEventListener("submit", agregarPrestamo);
+        });
+    </script>
 </head>
 <body>
-    <h1>Gestión de Préstamos</h1>
+    <div class="background">
+        <header class="header">
+            <h1>Gestión de Préstamos</h1>
+        </header>
+        <main class="container">
+            <section class="results-section">
+                <table id="prestamos-table">
+                    <thead>
+                        <tr>
+                            <th>ID Libro</th>
+                            <th>Libro</th>
+                            <th>Estudiante</th>
+                            <th>Fecha de Préstamo</th>
+                            <th>Fecha de Devolución</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </section>
 
-    <h2>Préstamos Activos</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID Libro</th>
-                <th>Libro</th>
-                <th>Estudiante</th>
-                <th>Fecha de Préstamo</th>
-                <th>Fecha de Devolución</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{range .}}
-            <tr>
-                <td>{{.LibroID}}</td>
-                <td>{{.Libro}}</td>
-                <td>{{.Estudiante}}</td>
-                <td>{{.FechaPrestamo.Format "02-01-2006"}}</td>
-                <td>{{.FechaDevolucion.Format "02-01-2006"}}</td>
-                <td>
-                    <!-- Formulario para registrar devolución -->
-                    <form method="post" action="/prestamos">
-                        <input type="hidden" name="_method" value="PUT">
-                        <input type="hidden" name="libro_id" value="{{.LibroID}}">
-                        <button type="submit">Registrar Devolución</button>
-                    </form>
+            <section class="add-loan-section">
+                <h2>Crear Préstamo</h2>
+                <form id="agregar-prestamo-form">
+                    <input type="number" id="nuevo-prestamo-libro-id" placeholder="ID del Libro" required>
+                    <input type="text" id="nuevo-prestamo-estudiante" placeholder="Estudiante" required>
+                    <button type="submit">Crear Préstamo</button>
+                </form>
+            </section>
 
-                    <!-- Formulario para eliminar préstamo -->
-                    <form method="post" action="/prestamos">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <input type="hidden" name="libro_id" value="{{.LibroID}}">
-                        <button type="submit">Eliminar Préstamo</button>
-                    </form>
-                </td>
-            </tr>
-            {{else}}
-            <tr>
-                <td colspan="6">No hay préstamos activos</td>
-            </tr>
-            {{end}}
-        </tbody>
-    </table>
-
-    <div class="create-loan-form">
-        <h2>Crear Préstamo</h2>
-        <form method="post" action="/prestamos">
-            <label for="libro_id">ID Libro:</label>
-            <input type="number" name="libro_id" id="libro_id" required>
-            <label for="estudiante">Estudiante:</label>
-            <input type="text" name="estudiante" id="estudiante" required>
-            <button type="submit">Crear Préstamo</button>
-        </form>
-    </div>
-
-    <div class="back-to-menu">
-        <a href="/">Volver al Menú Principal</a>
+            <a href="/">Volver al Inicio</a>
+        </main>
+        <footer class="footer">
+            <p>&copy; 2024 Sistema de Gestión de Libros Electrónicos. Todos los derechos reservados.</p>
+        </footer>
     </div>
 </body>
 </html>

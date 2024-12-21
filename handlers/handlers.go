@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -67,7 +68,6 @@ func BuscarHandler(libroService servicios.ILibroService, autorService servicios.
 
 func AutoresHandler(autorService servicios.IAutorService, templates *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Detectar método HTTP real desde el parámetro _method
 		realMethod := r.Method
 		if m := r.FormValue("_method"); m != "" {
 			realMethod = strings.ToUpper(m)
@@ -75,14 +75,20 @@ func AutoresHandler(autorService servicios.IAutorService, templates *template.Te
 
 		switch realMethod {
 		case http.MethodGet:
-			// Mostrar todos los autores
 			autores := autorService.ObtenerTodos()
+			if r.Header.Get("Accept") == "application/json" {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(autores)
+				return
+			}
+
+			// Renderizar plantilla si no es JSON
 			err := templates.ExecuteTemplate(w, "autores.html", autores)
 			if err != nil {
 				http.Error(w, "Error al renderizar la plantilla de autores", http.StatusInternalServerError)
 			}
+
 		case http.MethodPost:
-			// Agregar un nuevo autor
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -100,8 +106,8 @@ func AutoresHandler(autorService servicios.IAutorService, templates *template.Te
 				return
 			}
 			http.Redirect(w, r, "/autores", http.StatusSeeOther)
+
 		case http.MethodPut:
-			// Editar un autor existente
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -121,8 +127,8 @@ func AutoresHandler(autorService servicios.IAutorService, templates *template.Te
 				return
 			}
 			http.Redirect(w, r, "/autores", http.StatusSeeOther)
+
 		case http.MethodDelete:
-			// Eliminar un autor
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -140,15 +146,16 @@ func AutoresHandler(autorService servicios.IAutorService, templates *template.Te
 				return
 			}
 			http.Redirect(w, r, "/autores", http.StatusSeeOther)
+
 		default:
 			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		}
 	}
 }
 
+// LibrosHandler
 func LibrosHandler(libroService servicios.ILibroService, autorService servicios.IAutorService, categoriaService servicios.ICategoriaService, templates *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Detectar el método HTTP real desde el parámetro _method
 		realMethod := r.Method
 		if m := r.FormValue("_method"); m != "" {
 			realMethod = strings.ToUpper(m)
@@ -156,14 +163,18 @@ func LibrosHandler(libroService servicios.ILibroService, autorService servicios.
 
 		switch realMethod {
 		case http.MethodGet:
-			// Mostrar todos los libros
 			libros := libroService.ObtenerTodos()
+			if r.Header.Get("Accept") == "application/json" {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(libros)
+				return
+			}
 			err := templates.ExecuteTemplate(w, "libros.html", libros)
 			if err != nil {
 				http.Error(w, "Error al renderizar la plantilla de libros", http.StatusInternalServerError)
 			}
+
 		case http.MethodPost:
-			// Agregar un nuevo libro
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -173,7 +184,7 @@ func LibrosHandler(libroService servicios.ILibroService, autorService servicios.
 			autor := r.FormValue("autor")
 			categoria := r.FormValue("categoria")
 			if titulo == "" || autor == "" || categoria == "" {
-				http.Error(w, "Título, Autor y Categoría son obligatorios", http.StatusBadRequest)
+				http.Error(w, "Todos los campos son obligatorios", http.StatusBadRequest)
 				return
 			}
 			libro := modelos.Libro{Titulo: titulo, Autor: autor, Categoria: categoria}
@@ -183,8 +194,8 @@ func LibrosHandler(libroService servicios.ILibroService, autorService servicios.
 				return
 			}
 			http.Redirect(w, r, "/libros", http.StatusSeeOther)
+
 		case http.MethodPut:
-			// Editar un libro existente
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -206,8 +217,8 @@ func LibrosHandler(libroService servicios.ILibroService, autorService servicios.
 				return
 			}
 			http.Redirect(w, r, "/libros", http.StatusSeeOther)
+
 		case http.MethodDelete:
-			// Eliminar un libro
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -225,15 +236,14 @@ func LibrosHandler(libroService servicios.ILibroService, autorService servicios.
 				return
 			}
 			http.Redirect(w, r, "/libros", http.StatusSeeOther)
+
 		default:
 			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		}
 	}
 }
-
 func PrestamosHandler(prestamoService servicios.IPrestamoService, libroService servicios.ILibroService, templates *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Detectar el método HTTP real desde el parámetro _method
 		realMethod := r.Method
 		if m := r.FormValue("_method"); m != "" {
 			realMethod = strings.ToUpper(m)
@@ -241,14 +251,18 @@ func PrestamosHandler(prestamoService servicios.IPrestamoService, libroService s
 
 		switch realMethod {
 		case http.MethodGet:
-			// Mostrar todos los préstamos activos
 			prestamos := prestamoService.ObtenerActivos()
+			if r.Header.Get("Accept") == "application/json" {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(prestamos)
+				return
+			}
 			err := templates.ExecuteTemplate(w, "prestamos.html", prestamos)
 			if err != nil {
 				http.Error(w, "Error al renderizar la plantilla de préstamos", http.StatusInternalServerError)
 			}
+
 		case http.MethodPost:
-			// Crear un nuevo préstamo
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -272,8 +286,8 @@ func PrestamosHandler(prestamoService servicios.IPrestamoService, libroService s
 				return
 			}
 			http.Redirect(w, r, "/prestamos", http.StatusSeeOther)
+
 		case http.MethodPut:
-			// Registrar la devolución de un libro
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -291,8 +305,8 @@ func PrestamosHandler(prestamoService servicios.IPrestamoService, libroService s
 				return
 			}
 			http.Redirect(w, r, "/prestamos", http.StatusSeeOther)
+
 		case http.MethodDelete:
-			// Eliminar un préstamo
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -310,15 +324,14 @@ func PrestamosHandler(prestamoService servicios.IPrestamoService, libroService s
 				return
 			}
 			http.Redirect(w, r, "/prestamos", http.StatusSeeOther)
+
 		default:
 			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		}
 	}
 }
-
 func CategoriasHandler(categoriaService servicios.ICategoriaService, templates *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Detectar método HTTP real desde el parámetro _method
 		realMethod := r.Method
 		if m := r.FormValue("_method"); m != "" {
 			realMethod = strings.ToUpper(m)
@@ -326,14 +339,18 @@ func CategoriasHandler(categoriaService servicios.ICategoriaService, templates *
 
 		switch realMethod {
 		case http.MethodGet:
-			// Mostrar todas las categorías
 			categorias := categoriaService.ObtenerTodas()
+			if r.Header.Get("Accept") == "application/json" {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(categorias)
+				return
+			}
 			err := templates.ExecuteTemplate(w, "categorias.html", categorias)
 			if err != nil {
 				http.Error(w, "Error al renderizar la plantilla de categorías", http.StatusInternalServerError)
 			}
+
 		case http.MethodPost:
-			// Agregar una nueva categoría
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -351,8 +368,8 @@ func CategoriasHandler(categoriaService servicios.ICategoriaService, templates *
 				return
 			}
 			http.Redirect(w, r, "/categorias", http.StatusSeeOther)
+
 		case http.MethodPut:
-			// Editar una categoría existente
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -372,8 +389,8 @@ func CategoriasHandler(categoriaService servicios.ICategoriaService, templates *
 				return
 			}
 			http.Redirect(w, r, "/categorias", http.StatusSeeOther)
+
 		case http.MethodDelete:
-			// Eliminar una categoría
 			err := r.ParseForm()
 			if err != nil {
 				http.Error(w, "Datos inválidos", http.StatusBadRequest)
@@ -391,6 +408,7 @@ func CategoriasHandler(categoriaService servicios.ICategoriaService, templates *
 				return
 			}
 			http.Redirect(w, r, "/categorias", http.StatusSeeOther)
+
 		default:
 			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		}

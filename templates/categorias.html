@@ -18,7 +18,7 @@
             text-align: center;
             background-color: #2c3e50;
             padding: 10px;
-            margin: 10px;
+            margin: 0;
         }
 
         h2 {
@@ -29,24 +29,21 @@
             width: 80%;
             margin: 20px auto;
             border-collapse: collapse;
-        }
-
-        table, th, td {
-            border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         th, td {
+            border: 1px solid #ccc;
             padding: 10px;
             text-align: center;
+            background-color: #fff; /* Fondo blanco para las filas */
         }
 
         th {
             background-color: #2980b9;
-            color: #ffffff;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
+            color: white;
         }
 
         form {
@@ -55,18 +52,18 @@
 
         input[type="text"] {
             padding: 5px;
-            margin-right: 10px;
             border-radius: 4px;
             border: 1px solid #ccc;
+            margin: 5px 0;
         }
 
         button {
             background-color: #2980b9;
-            color: #ffffff;
-            padding: 5px 10px;
+            color: white;
             border: none;
-            border-radius: 4px;
+            padding: 5px 10px;
             cursor: pointer;
+            border-radius: 4px;
             transition: background-color 0.3s;
         }
 
@@ -74,78 +71,152 @@
             background-color: #3498db;
         }
 
-        .add-category-form, .back-to-menu {
+        .container {
+            padding: 20px;
             text-align: center;
-            margin-top: 20px;
         }
 
-        .back-to-menu a {
+        .add-category-section {
+            margin: 20px 0;
+        }
+
+        a {
             text-decoration: none;
             background-color: #2980b9;
             color: #ffffff;
             padding: 10px 20px;
             border-radius: 5px;
+            display: inline-block;
             transition: background-color 0.3s;
         }
 
-        .back-to-menu a:hover {
+        a:hover {
             background-color: #3498db;
         }
+
+        /* Estilo para el fondo */
+        .background {
+            background-color: #2c3e50;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilo para el encabezado */
+        .header {
+            background-color: #34495e;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Estilo para el pie de página */
+        .footer {
+            background-color: #34495e;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px;
+            margin-top: auto;
+        }
     </style>
+    <script>
+        async function cargarCategorias() {
+            try {
+                const response = await fetch('/categorias', { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) throw new Error('Error al cargar las categorías');
+                const categorias = await response.json();
+
+                const tbody = document.querySelector("#categorias-table tbody");
+                tbody.innerHTML = "";
+
+                categorias.forEach(categoria => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${categoria.id}</td>
+                        <td>${categoria.nombre}</td>
+                        <td>
+                            <form method="post" action="/categorias">
+                                <input type="hidden" name="_method" value="PUT">
+                                <input type="hidden" name="id" value="${categoria.id}">
+                                <input type="text" name="nombre" placeholder="Nuevo nombre" required>
+                                <button type="submit">Editar</button>
+                            </form>
+                            <form method="post" action="/categorias">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <input type="hidden" name="id" value="${categoria.id}">
+                                <button type="submit">Eliminar</button>
+                            </form>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error(error);
+                alert("Error al cargar las categorías");
+            }
+        }
+
+        async function agregarCategoria(event) {
+            event.preventDefault();
+            const nombre = document.querySelector("#nueva-categoria-nombre").value.trim();
+
+            if (!nombre) {
+                alert("El nombre de la categoría es obligatorio");
+                return;
+            }
+
+            try {
+                const response = await fetch('/categorias', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `nombre=${encodeURIComponent(nombre)}`
+                });
+                if (!response.ok) throw new Error('Error al agregar la categoría');
+                document.querySelector("#nueva-categoria-nombre").value = "";
+                await cargarCategorias();
+            } catch (error) {
+                console.error(error);
+                alert("Error al agregar la categoría");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            cargarCategorias();
+            document.querySelector("#agregar-categoria-form").addEventListener("submit", agregarCategoria);
+        });
+    </script>
 </head>
 <body>
-    <h1>Gestión de Categorías</h1>
+    <div class="background">
+        <header class="header">
+            <h1>Gestión de Categorías</h1>
+        </header>
+        <main class="container">
+            <section class="results-section">
+                <table id="categorias-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </section>
 
-    <h2>Lista de Categorías</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{range .}}
-            <tr>
-                <td>{{.ID}}</td>
-                <td>{{.Nombre}}</td>
-                <td>
-                    <!-- Formulario para editar categoría -->
-                    <form method="post" action="/categorias">
-                        <input type="hidden" name="_method" value="PUT">
-                        <input type="hidden" name="id" value="{{.ID}}">
-                        <input type="text" name="nombre" placeholder="Nuevo nombre" required>
-                        <button type="submit">Editar</button>
-                    </form>
+            <section class="add-category-section">
+                <h2>Agregar Categoría</h2>
+                <form id="agregar-categoria-form">
+                    <input type="text" id="nueva-categoria-nombre" placeholder="Nombre de la categoría" required>
+                    <button type="submit">Agregar</button>
+                </form>
+            </section>
 
-                    <!-- Formulario para eliminar categoría -->
-                    <form method="post" action="/categorias">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <input type="hidden" name="id" value="{{.ID}}">
-                        <button type="submit">Eliminar</button>
-                    </form>
-                </td>
-            </tr>
-            {{else}}
-            <tr>
-                <td colspan="3">No hay categorías disponibles</td>
-            </tr>
-            {{end}}
-        </tbody>
-    </table>
-
-    <div class="add-category-form">
-        <h2>Agregar Categoría</h2>
-        <form method="post" action="/categorias">
-            <label for="nombre">Nombre:</label>
-            <input type="text" name="nombre" id="nombre" required>
-            <button type="submit">Agregar Categoría</button>
-        </form>
-    </div>
-
-    <div class="back-to-menu">
-        <a href="/">Volver al Menú Principal</a>
+            <a href="/">Volver al Inicio</a>
+        </main>
+        <footer class="footer">
+            <p>&copy; 2024 Sistema de Gestión de Libros Electrónicos. Todos los derechos reservados.</p>
+        </footer>
     </div>
 </body>
 </html>

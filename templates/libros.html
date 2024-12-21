@@ -18,7 +18,7 @@
             text-align: center;
             background-color: #2c3e50;
             padding: 10px;
-            margin: 10px;
+            margin: 0;
         }
 
         h2 {
@@ -29,24 +29,21 @@
             width: 80%;
             margin: 20px auto;
             border-collapse: collapse;
-        }
-
-        table, th, td {
-            border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         th, td {
+            border: 1px solid #ccc;
             padding: 10px;
             text-align: center;
+            background-color: #fff; /* Fondo blanco para las filas */
         }
 
         th {
             background-color: #2980b9;
-            color: #ffffff;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
+            color: white;
         }
 
         form {
@@ -55,18 +52,18 @@
 
         input[type="text"] {
             padding: 5px;
-            margin-right: 10px;
             border-radius: 4px;
             border: 1px solid #ccc;
+            margin: 5px 0;
         }
 
         button {
             background-color: #2980b9;
-            color: #ffffff;
-            padding: 5px 10px;
+            color: white;
             border: none;
-            border-radius: 4px;
+            padding: 5px 10px;
             cursor: pointer;
+            border-radius: 4px;
             transition: background-color 0.3s;
         }
 
@@ -74,88 +71,164 @@
             background-color: #3498db;
         }
 
-        .add-book-form, .back-to-menu {
+        .container {
+            padding: 20px;
             text-align: center;
-            margin-top: 20px;
         }
 
-        .back-to-menu a {
+        .add-book-section {
+            margin: 20px 0;
+        }
+
+        a {
             text-decoration: none;
             background-color: #2980b9;
             color: #ffffff;
             padding: 10px 20px;
             border-radius: 5px;
+            display: inline-block;
             transition: background-color 0.3s;
         }
 
-        .back-to-menu a:hover {
+        a:hover {
             background-color: #3498db;
         }
+
+        /* Estilo para el fondo */
+        .background {
+            background-color: #2c3e50;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Estilo para el encabezado */
+        .header {
+            background-color: #34495e;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Estilo para el pie de página */
+        .footer {
+            background-color: #34495e;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px;
+            margin-top: auto;
+        }
     </style>
+    <script>
+        async function cargarLibros() {
+            try {
+                const response = await fetch('/libros', { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) throw new Error('Error al cargar los libros');
+                const libros = await response.json();
+
+                const tbody = document.querySelector("#libros-table tbody");
+                tbody.innerHTML = "";
+
+                libros.forEach(libro => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${libro.id}</td>
+                        <td>${libro.titulo}</td>
+                        <td>${libro.autor}</td>
+                        <td>${libro.categoria}</td>
+                        <td>
+                            <form method="post" action="/libros">
+                                <input type="hidden" name="_method" value="PUT">
+                                <input type="hidden" name="id" value="${libro.id}">
+                                <input type="text" name="titulo" placeholder="Nuevo título" required>
+                                <input type="text" name="autor" placeholder="Nuevo autor" required>
+                                <input type="text" name="categoria" placeholder="Nueva categoría" required>
+                                <button type="submit">Editar</button>
+                            </form>
+                            <form method="post" action="/libros">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <input type="hidden" name="id" value="${libro.id}">
+                                <button type="submit">Eliminar</button>
+                            </form>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error(error);
+                alert("Error al cargar los libros");
+            }
+        }
+
+        async function agregarLibro(event) {
+            event.preventDefault();
+            const titulo = document.querySelector("#nuevo-libro-titulo").value.trim();
+            const autor = document.querySelector("#nuevo-libro-autor").value.trim();
+            const categoria = document.querySelector("#nuevo-libro-categoria").value.trim();
+
+            if (!titulo || !autor || !categoria) {
+                alert("Todos los campos son obligatorios");
+                return;
+            }
+
+            try {
+                const response = await fetch('/libros', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `titulo=${encodeURIComponent(titulo)}&autor=${encodeURIComponent(autor)}&categoria=${encodeURIComponent(categoria)}`
+                });
+                if (!response.ok) throw new Error('Error al agregar el libro');
+                document.querySelector("#nuevo-libro-titulo").value = "";
+                document.querySelector("#nuevo-libro-autor").value = "";
+                document.querySelector("#nuevo-libro-categoria").value = "";
+                await cargarLibros();
+            } catch (error) {
+                console.error(error);
+                alert("Error al agregar el libro");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            cargarLibros();
+            document.querySelector("#agregar-libro-form").addEventListener("submit", agregarLibro);
+        });
+    </script>
 </head>
 <body>
-    <h1>Gestión de Libros</h1>
+    <div class="background">
+        <header class="header">
+            <h1>Gestión de Libros</h1>
+        </header>
+        <main class="container">
+            <section class="results-section">
+                <table id="libros-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Título</th>
+                            <th>Autor</th>
+                            <th>Categoría</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </section>
 
-    <h2>Lista de Libros</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Título</th>
-                <th>Autor</th>
-                <th>Categoría</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{range .}}
-            <tr>
-                <td>{{.ID}}</td>
-                <td>{{.Titulo}}</td>
-                <td>{{.Autor}}</td>
-                <td>{{.Categoria}}</td>
-                <td>
-                    <!-- Formulario para editar libro -->
-                    <form method="post" action="/libros">
-                        <input type="hidden" name="_method" value="PUT">
-                        <input type="hidden" name="id" value="{{.ID}}">
-                        <input type="text" name="titulo" placeholder="Nuevo título" required>
-                        <input type="text" name="autor" placeholder="Nuevo autor" required>
-                        <input type="text" name="categoria" placeholder="Nueva categoría" required>
-                        <button type="submit">Editar</button>
-                    </form>
+            <section class="add-book-section">
+                <h2>Agregar Libro</h2>
+                <form id="agregar-libro-form">
+                    <input type="text" id="nuevo-libro-titulo" placeholder="Título del libro" required>
+                    <input type="text" id="nuevo-libro-autor" placeholder="Autor del libro" required>
+                    <input type="text" id="nuevo-libro-categoria" placeholder="Categoría del libro" required>
+                    <button type="submit">Agregar</button>
+                </form>
+            </section>
 
-                    <!-- Formulario para eliminar libro -->
-                    <form method="post" action="/libros">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <input type="hidden" name="id" value="{{.ID}}">
-                        <button type="submit">Eliminar</button>
-                    </form>
-                </td>
-            </tr>
-            {{else}}
-            <tr>
-                <td colspan="5">No hay libros disponibles</td>
-            </tr>
-            {{end}}
-        </tbody>
-    </table>
-
-    <div class="add-book-form">
-        <h2>Agregar Libro</h2>
-        <form method="post" action="/libros">
-            <label for="titulo">Título:</label>
-            <input type="text" name="titulo" id="titulo" required>
-            <label for="autor">Autor:</label>
-            <input type="text" name="autor" id="autor" required>
-            <label for="categoria">Categoría:</label>
-            <input type="text" name="categoria" id="categoria" required>
-            <button type="submit">Agregar Libro</button>
-        </form>
-    </div>
-
-    <div class="back-to-menu">
-        <a href="/">Volver al Menú Principal</a>
+            <a href="/">Volver al Inicio</a>
+        </main>
+        <footer class="footer">
+            <p>&copy; 2024 Sistema de Gestión de Libros Electrónicos. Todos los derechos reservados.</p>
+        </footer>
     </div>
 </body>
 </html>
